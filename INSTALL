@@ -1,0 +1,50 @@
+Compilation dependencies
+========================
+
+Be sure you have following packages installed on your system:
+
+* libpcap-dev
+* libnet-dev
+* libmysqlclient-dev
+
+Also, you will need a C++ compiler, we recommend GNU's, so install:
+
+* g++
+
+
+Installation instructions
+=========================
+
+Assuming you have downloaded source code in tar.gz compressed file. Follow this
+steps to compile and install from source:
+
+  tar -xvzf swarm-0.1.tar.gz
+  cd swarm-0.1
+  ./configure
+  make
+  sudo make install
+
+
+Usage
+=====
+
+As swarm must read from, and write to, a network interface, it has to be
+executed as root user (or be invoked as sudo). It's mandatory to state which
+network interface it will use, so basic usage is:
+
+  sudo swarm eth0
+
+By default, swarm captures and processes only ip traffic. To get information
+from some other network protocols, use this options:
+
+  --arp   Capture and inject ARP packets
+  --icmp  Capture and inject ICMP packets
+
+More information about usage is available with --help option:
+
+  sudo swarm --help
+
+Version information available with --version option:
+
+  sudo swarm --version
+

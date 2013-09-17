@@ -1,0 +1,22 @@
+Swarm Net Explorer
+==================
+
+Swarm is a network devices detector, based on libpcap and libnet.
+
+Swarm sniff all ip protocol packets that arrive to some network interface,
+and register the ip addresses of hosts taking part on the communication.
+Then, launches a bunch of custom-forged network packets, with the aim of
+getting information about them. All information is stored in a MySQL database,
+so it can be analyzed in a later time.
+
+Currently, only ARP and ICMP protocols may be used to try to guess MAC address
+and reachability from the device on which Swarm is launched.
+
+As Swarm only can work with data arriving to a local network interface,
+it's recommended to launch on a trunk interface of a switch, or to use some
+technique which makes network traffic to flow through used interface (i.e.
+MITM attack).
+
+Note: Swarm is currently a proof of concept (PoC), and a project which main
+purpose is to learn about network developing with C++.
+
