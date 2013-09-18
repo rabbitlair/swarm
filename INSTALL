@@ -26,7 +26,10 @@ steps to compile and install from source:
   sudo make install
 
 Configure database settings by editing swarm.conf file. Depending on how you
-installed Swarm, it can be on /etc or on /usr/local/etc.
+installed Swarm, it can be on /etc or on /usr/local/etc. You also have to
+create an user account on MySQL server, a database, and give permissions to
+user, so it can operate over the database.
+
 
 Usage
 =====

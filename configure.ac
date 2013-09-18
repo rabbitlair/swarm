@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([swarm], [0.1], [ezequielvazq@gmail.com])
+AC_INIT([swarm], [0.1.1], [ezequielvazq@gmail.com])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([src/swarm.cpp])
 AM_CONFIG_HEADER(config.h)

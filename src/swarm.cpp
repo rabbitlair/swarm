@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  // Read db configuration from a plaintext settings.ini file
+  // Read db configuration from a plaintext swarm.conf file
   readDbConfig("swarm.conf");
 
   // Variables needed
