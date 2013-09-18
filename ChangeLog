@@ -1,3 +1,6 @@
+2013-09-18 Ezequiel Vázquez De la calle <ezequielvazq@gmail.com>
+  * Add settings file support for MySQL credentials
+
 2013-09-17 Ezequiel Vázquez De la calle <ezequielvazq@gmail.com>
   * First release of swarm
 

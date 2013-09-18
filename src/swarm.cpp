@@ -22,8 +22,10 @@
  */
 
 #include "config.h"
+#include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <libconfig.h++>
 #include <string>
 
 #include "db.h"
@@ -32,11 +34,13 @@
 #include "sniffer.h"
 
 using namespace std;
+using namespace libconfig;
 
-/**
- * Read all needed options from command line
- */
+// Read all needed options from command line
 void readOptions(string& interface, string& filter, int argc, char **argv);
+
+// Read database settings from config file
+void readDbConfig(string file);
 
 /**
  * Main program function
@@ -48,12 +52,8 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  // TODO Read db configuration from a plaintext settings file
-
-  // Init MySQL connection
-  if (db->init("localhost", "swarm", "swarm", "swarm")) {
-    exit(EXIT_FAILURE);
-  }
+  // Read db configuration from a plaintext settings.ini file
+  readDbConfig("swarm.conf");
 
   // Variables needed
   string interface, filter;
@@ -133,6 +133,49 @@ void readOptions(string& interface, string& filter, int argc, char **argv) {
   }
   else {
     interface = argv[optind++];
+  }
+}
+
+// Reads database configuration from a settings.ini file
+void readDbConfig(string file) {
+  Config cfg;
+  file = "/etc/" + file;
+
+  // Check if settings file exists on /etc. Else, look into /usr/local/etc/
+  ifstream f(file.c_str());
+  if (not f.good()) {
+    file = "/usr/local" + file;
+  }
+  f.close();
+
+  // Open and parse file: look in /etc and /usr/local/etc
+  try {
+    cfg.readFile((char*)file.c_str());
+  }
+  catch(const FileIOException &fioex) {
+    cerr << "ERROR - I/O error while reading file" << file << endl;
+    exit(EXIT_FAILURE);
+  }
+  catch(ParseException &pex) {
+    cerr << "ERROR - Parse error at " << file << ":" << pex.getLine();
+    cerr << " - " << pex.getError() << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  // Get values from parsed settings file
+  try {
+    string host = cfg.lookup("host");
+    string username = cfg.lookup("username");
+    string password = cfg.lookup("password");
+    string database = cfg.lookup("database");
+
+    // Init MySQL connection
+    if (db->init(host, username, password, database)) {
+      exit(EXIT_FAILURE);
+    }
+  }
+  catch(const SettingNotFoundException &nfex) {
+    cerr << "Wrong or missing setting name in configuration file" << endl;
   }
 }
 

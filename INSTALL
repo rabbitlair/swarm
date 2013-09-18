@@ -6,6 +6,7 @@ Be sure you have following packages installed on your system:
 * libpcap-dev
 * libnet-dev
 * libmysqlclient-dev
+* libconfig++-dev
 
 Also, you will need a C++ compiler, we recommend GNU's, so install:
 
@@ -24,6 +25,8 @@ steps to compile and install from source:
   make
   sudo make install
 
+Configure database settings by editing swarm.conf file. Depending on how you
+installed Swarm, it can be on /etc or on /usr/local/etc.
 
 Usage
 =====

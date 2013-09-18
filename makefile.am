@@ -1,7 +1,8 @@
 AM_CXXFLAGS = --pedantic -Wall -std=c++0x -Isrc
-AM_LDFLAGS = $(LIBS)
+swarmdir = $(sysconfdir)
 
 bin_PROGRAMS = swarm
 swarm_SOURCES = src/swarm.cpp src/actions.h src/actions.cpp src/db.h src/db.cpp\
   src/device.h src/device.cpp src/injector.h src/injector.cpp src/monitor.h\
   src/monitor.cpp src/sniffer.h src/sniffer.cpp
+swarm_DATA = swarm.conf
