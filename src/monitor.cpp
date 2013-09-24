@@ -38,10 +38,10 @@ bool Monitor::addDevice(Device& device) {
   // Protect access using mutex lock
   _mutex.lock();
   result = _devices.insert(pair<string,Device>(device.getIp(), device));
-  _mutex.unlock();
-
   // Save updated device to database
   result.first->second.save();
+  device = result.first->second;
+  _mutex.unlock();
 
   // Return true if device was inserted, false if it existed
   return result.second;
@@ -55,12 +55,12 @@ bool Monitor::updateDevice(const string& ip, Device& device) {
   }
 
   // Actually update stored device
+  // Save updated device to database
   _mutex.lock();
   _devices[ip] = device;
-  _mutex.unlock();
-
-  // Save updated device to database
   _devices[ip].save();
+  device = _devices[ip];
+  _mutex.unlock();
 
   return false;
 }
