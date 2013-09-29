@@ -63,7 +63,7 @@ void gotPacket(u_char *args, const struct pcap_pkthdr *header,
     // Store source ip address if it's not saved yet, and it's private
     if (sniffer->ipIsPrivate(src) && not monitor->checkDevice(src)) {
       // Do not store own ip address
-      if (src != sniffer->getIp()) {
+      if (src != sniffer->getIp() and src != sniffer->getSpoofIp()) {
         Device dev = Device(src);
         monitor->addDevice(dev);
       }
@@ -74,18 +74,24 @@ void gotPacket(u_char *args, const struct pcap_pkthdr *header,
   if (inet_pton(AF_INET, dst.c_str(), &(sa.sin_addr)) > 0) {
     // Store destination ip address if it's not saved yet, and it's private
     if (sniffer->ipIsPrivate(dst) and not monitor->checkDevice(dst)) {
-      // Do not store own ip address
-      if (dst != sniffer->getIp()) {
+      // Do not store own ip address, or spoofed
+      if (dst != sniffer->getIp() and dst != sniffer->getSpoofIp()) {
         Device dev = Device(dst);
         monitor->addDevice(dev);
       }
     }
   }
 
+  // Use spoofed ip as own ip address, if defined
+  string ip = sniffer->getIp();
+  if (not sniffer->getSpoofIp().empty()) {
+    ip = sniffer->getSpoofIp();
+  }
+
   // Use ICMP packets to guess device reachability
   // As we want to know reachability from our device, only icmp packets with
   // our ip address as destination one are needed
-  if (iph->protocol == 1 && dst == sniffer->getIp()) {
+  if (iph->protocol == 1 && dst == ip) {
     sniffer->processIcmp(packet, src);
   }
 }
@@ -113,11 +119,22 @@ void inject(void) {
 
     // If current device has not MAC address registered, launch ARP request
     if (dev.getMac().empty()) {
-      injector->injectArp(dev.getIp());
+      injector->injectArpRequest(dev.getIp());
     }
-    // Check reachability, if it has not been checked. We need MAC address
-    else if (dev.getReachable() == -1) {
-      injector->injectIcmp(dev.getIp(), dev.getMac());
+
+    // Check reachability, if it has not been checked.
+    if (dev.getReachable() == -1) {
+      if (dev.getMac().empty()) {
+        injector->injectIcmp(dev.getIp(), "FF:FF:FF:FF:FF:FF");
+      }
+      else {
+        injector->injectIcmp(dev.getIp(), dev.getMac());
+      }
+    }
+
+    // If performing IP spoofing, poison current device
+    if (not dev.getMac().empty() and not injector->getSpoofIp().empty()) {
+      injector->injectArpSpoofResponse(dev.getIp(), dev.getMac());
     }
 
     // Advance to next device inside monitor

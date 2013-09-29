@@ -1,3 +1,6 @@
+2013-09-29 Ezequiel Vázquez De la calle <ezequielvazq@gmail.com>
+  * Implemented the possibility of perform IP spoofing
+
 2013-09-24 Ezequiel Vázquez De la calle <ezequielvazq@gmail.com>
   * Fix mutex lock and device reference output on Monitor class
 

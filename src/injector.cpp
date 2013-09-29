@@ -43,7 +43,7 @@ Injector::~Injector(void) {
 }
 
 // Initialize injector object, and launch as thread
-void Injector::start(string iface) {
+void Injector::start(string& iface, string spoof) {
   string errbuf;
 
   // Do not initialize twice
@@ -58,6 +58,11 @@ void Injector::start(string iface) {
     cerr << "ERROR - Libnet couldn't be initialized" << endl;
     cerr << errbuf << endl;
     exit(EXIT_FAILURE);
+  }
+
+  // If spoof ip address received, save it
+  if (not spoof.empty()) {
+    _spoof_ip = spoof;
   }
 
   // Get own ip address from libnet handler
@@ -96,15 +101,21 @@ void Injector::start(string iface) {
 }
 
 // Inject ARP request to find MAC address
-void Injector::injectArp(const string& target) {
+void Injector::injectArpRequest(const string& target) {
   u_int32_t src_ip_addr;
   u_int32_t dst_ip_addr;
   u_int8_t broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   u_int8_t mac_zero_addr[6] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
   struct libnet_ether_addr *src_mac_addr;
 
+  // Use spoofed ip address, if defined
+  string src_ip = _ip;
+  if (not _spoof_ip.empty()) {
+    src_ip = _spoof_ip;
+  }
+
   // Get source IP address
-  src_ip_addr = libnet_name2addr4(_handler, (char*)_ip.c_str(),
+  src_ip_addr = libnet_name2addr4(_handler, (char*)src_ip.c_str(),
       LIBNET_DONT_RESOLVE);
   if (src_ip_addr < 0) {
     cerr << "ERROR - Can not determine source ip address for ARP request ";
@@ -155,6 +166,81 @@ void Injector::injectArp(const string& target) {
   }
 }
 
+// Inject ARP response to perform IP spoofing
+void Injector::injectArpSpoofResponse(const string& ip, const string& mac) {
+  u_int32_t src_ip_addr;
+  u_int32_t dst_ip_addr;
+  struct libnet_ether_addr *src_mac_addr;
+  struct libnet_ether_addr *dst_mac_addr;
+
+  // Use spoofed ip address, if defined
+  string src_ip = _ip;
+  if (not _spoof_ip.empty()) {
+    src_ip = _spoof_ip;
+  }
+
+  // Get source IP address
+  src_ip_addr = libnet_name2addr4(_handler, (char*)src_ip.c_str(),
+      LIBNET_DONT_RESOLVE);
+  if (src_ip_addr < 0) {
+    cerr << "ERROR - Can not determine source ip address for ARP response";
+    cerr << endl << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Get destination IP address
+  dst_ip_addr = libnet_name2addr4(_handler, (char*)ip.c_str(),
+      LIBNET_DONT_RESOLVE);
+  if (dst_ip_addr < 0) {
+    cerr << "ERROR - Can not determine target ip address for ARP response";
+    cerr << endl << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Get source MAC address
+  src_mac_addr = libnet_get_hwaddr(_handler);
+  if (src_mac_addr == NULL) {
+    cerr << "ERROR - Can not determine source mac address for ARP response";
+    cerr << endl << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Get destination MAC address
+  dst_mac_addr = (libnet_ether_addr*)ether_aton((char*)mac.c_str());
+  if (dst_mac_addr == NULL) {
+    cerr << "ERROR - Can not determine source mac address for ARP response";
+    cerr << endl << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Build ARP response header
+  _arp_tag = libnet_build_arp(ARPHRD_ETHER, ETHERTYPE_IP, 6, 4, ARPOP_REPLY,
+      src_mac_addr->ether_addr_octet, (u_int8_t*)(&src_ip_addr),
+      dst_mac_addr->ether_addr_octet, (u_int8_t*)(&dst_ip_addr), NULL, 0,
+      _handler, _arp_tag);
+  if (_arp_tag == -1) {
+    cerr << "ERROR - Can't build ARP header for target ip " << ip << endl;
+    cerr << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Build ethernet header
+  _eth_arp_tag = libnet_build_ethernet(dst_mac_addr->ether_addr_octet,
+      src_mac_addr->ether_addr_octet, ETHERTYPE_ARP, NULL, 0, _handler,
+      _eth_arp_tag);
+  if (_eth_arp_tag == -1) {
+    cerr << "ERROR - Can't build eth header for target ip " << ip << endl;
+    cerr << libnet_geterror(_handler) << endl;
+    return;
+  }
+
+  // Writing packet to interface
+  if (libnet_write(_handler) == -1) {
+    cerr << "ERROR - Can't write packet to interface" << endl;
+    cerr << libnet_geterror(_handler) << endl;
+  }
+}
+
 // Inject ICMP echo request to find reachability
 void Injector::injectIcmp(const string& ip, const string& mac) {
   u_int32_t src_ip_addr;
@@ -176,8 +262,14 @@ void Injector::injectIcmp(const string& ip, const string& mac) {
     return;
   }
 
+  // Use spoofed ip address, if defined
+  string src_ip = _ip;
+  if (not _spoof_ip.empty()) {
+    src_ip = _spoof_ip;
+  }
+
   // Get source IP address
-  src_ip_addr = libnet_name2addr4(_handler, (char*)_ip.c_str(),
+  src_ip_addr = libnet_name2addr4(_handler, (char*)src_ip.c_str(),
       LIBNET_DONT_RESOLVE);
   if (src_ip_addr < 0) {
     cerr << "ERROR - Can not determine source ip address for ICMP request";
@@ -237,6 +329,11 @@ void Injector::injectIcmp(const string& ip, const string& mac) {
     cerr << "ERROR - Can't write packet to interface" << endl;
     cerr << libnet_geterror(_handler) << endl;
   }
+}
+
+// Spoofed ip address getter
+const string& Injector::getSpoofIp(void) const {
+  return _spoof_ip;
 }
 
 // Ip address getter

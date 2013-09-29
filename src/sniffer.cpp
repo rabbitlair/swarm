@@ -38,7 +38,7 @@ Sniffer::~Sniffer(void) {
 }
 
 // Initialize interface, open sniffing session and apply packet filter
-void Sniffer::start(string iface, string filter_str) {
+void Sniffer::start(string& iface, string& filter_str, string spoof) {
   struct bpf_program filter;
   bpf_u_int32 mask;
   bpf_u_int32 net;
@@ -46,6 +46,11 @@ void Sniffer::start(string iface, string filter_str) {
   // Do not initialize twice
   if (_initialized) {
     return;
+  }
+
+  // Save spoof ip address, if any
+  if (not spoof.empty()) {
+    _spoof_ip = spoof;
   }
 
   // Get ip address from selected interface
@@ -150,7 +155,9 @@ void Sniffer::processArp(const u_char* packet) {
     // Check ip address validity
     if (inet_pton(AF_INET, spa.c_str(), &(sa.sin_addr)) > 0) {
       // Do not store own ip address
-      if (spa.c_str() != sniffer->getIp()) {
+      if (spa.c_str() != sniffer->getIp() and
+          spa.c_str() != sniffer->getSpoofIp())
+      {
         // If device is not registered, save it
         try {
           dev = monitor->getDevice(spa);
@@ -240,6 +247,11 @@ pcap_t* Sniffer::getHandler(void) const {
 // Own ip address getter
 const string& Sniffer::getIp(void) const {
   return _ip;
+}
+
+// Spoof ip address getter
+const string& Sniffer::getSpoofIp(void) const {
+  return _spoof_ip;
 }
 
 // Checks if some arbitrary ip address is private, according to IANA

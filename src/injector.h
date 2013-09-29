@@ -63,14 +63,22 @@
       /**
        * Initialize injector object, and launch as thread
        * @param iface Name of network interface on which inject packets
+       * @param ip Optional ip address to perform ip spoofing
        */
-      void start(string iface);
+      void start(string& iface, string ip = "");
 
       /**
        * Inject ARP request to find MAC address
        * @param target Ip address of device whose mac address we want to guess
        */
-      void injectArp(const string& target);
+      void injectArpRequest(const string& target);
+
+      /**
+       * Inject ARP response to perform IP spoofing
+       * @param ip Ip address of target which ARP table will be poisoned
+       * @param mac Mac address of target which ARP table will be poisoned
+       */
+      void injectArpSpoofResponse(const string& ip, const string& mac);
 
       /**
        * Inject ICMP echo request to find reachability
@@ -78,6 +86,12 @@
        * @param mac Mac address of device whose reachability we want to guess
        */
       void injectIcmp(const string& ip, const string& mac);
+
+      /**
+       * Spoofed ip address getter
+       * @return Spoofed ip address for inject interface
+       */
+      const string& getSpoofIp(void) const;
 
       /**
        * Own ip address getter
@@ -100,6 +114,7 @@
       Injector& operator=(const Injector& injector);
 
     private:
+      string _spoof_ip;
       string _ip;
       string _mac;
       libnet_ptag_t _eth_arp_tag;

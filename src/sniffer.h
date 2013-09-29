@@ -69,8 +69,9 @@
        * Initialize sniffer and launch it as thread
        * @param iface Name of network interface on which we want to sniff
        * @param filter_str Filter, on libpcap format, to apply on capture
+       * @param spoof Custom ip address to use as own (spoofing)
        */
-      void start(string iface, string filter_str);
+      void start(string& iface, string& filter_str, string spoof = "");
 
       /**
        * Process sniffed ARP packet. Extract some device's mac address
@@ -104,6 +105,12 @@
       const string& getIp(void) const;
 
       /**
+       * Spoofed ip address getter
+       * @return Spoofed ip address for capture interface
+       */
+      const string& getSpoofIp(void) const;
+
+      /**
        * Checks if some arbitrary valid ip address is private. Based on IANA
        * reserved private network ranges.
        * @param ip Ip address, on dot separated decimals format
@@ -126,6 +133,7 @@
       // Attributes
       string _errbuf;
       string _ip;
+      string _spoof_ip;
       pcap_t* _handler;
       bool _initialized;
       static Sniffer* _instance;

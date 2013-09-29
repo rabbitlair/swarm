@@ -37,7 +37,8 @@ using namespace std;
 using namespace libconfig;
 
 // Read all needed options from command line
-void readOptions(string& interface, string& filter, int argc, char **argv);
+void readOptions(string& interface, string& filter, string& ip,
+    int argc, char **argv);
 
 // Read database settings from config file
 void readDbConfig(string file);
@@ -56,16 +57,16 @@ int main(int argc, char **argv) {
   readDbConfig("swarm.conf");
 
   // Variables needed
-  string interface, filter;
+  string interface, filter, ip;
 
   // Read options from command line, also build filter string
-  readOptions(interface, filter, argc, argv);
+  readOptions(interface, filter, ip, argc, argv);
 
   // Launch sniffer thread
-  sniffer->start(interface, filter);
+  sniffer->start(interface, filter, ip);
 
   // Launch injector thread
-  injector->start(interface);
+  injector->start(interface, ip);
 
   // TODO write end condition
   while (1) {
@@ -76,13 +77,16 @@ int main(int argc, char **argv) {
 }
 
 // Function which read command line options and reads interface and filters
-void readOptions(string& interface, string& filter, int argc, char **argv) {
+void readOptions(string& interface, string& filter, string &ip,
+    int argc, char **argv)
+{
   // Define all accepted options
   const struct option long_options[] {
     {"arp", no_argument, 0, 'a'},
     {"help", no_argument, 0, 'h'},
     {"icmp", no_argument, 0, 'i'},
     {"snmp", no_argument, 0, 's'},
+    {"spoof", required_argument, 0, 'S'},
     {"version", no_argument, 0, 'v'},
     {0, 0, 0, 0}
   };
@@ -92,7 +96,7 @@ void readOptions(string& interface, string& filter, int argc, char **argv) {
 
   // Parse all command line options
   int c;
-  while ((c = getopt_long(argc, argv, "ahisv", long_options, NULL)) != -1) {
+  while ((c = getopt_long(argc, argv, "ahisSv", long_options, NULL)) != -1) {
     switch (c) {
       case 'a':
         filter.append(" or arp");
@@ -101,11 +105,13 @@ void readOptions(string& interface, string& filter, int argc, char **argv) {
       case 'h':
         cout << "Usage: " << argv[0] << " [options] interface" << endl;
         cout << "Options:" << endl;
-        cout << "  -a, --arp       Capture ARP packets" << endl;
-        cout << "  -h, --help      Show this help and exit" << endl;
-        cout << "  -i, --icmp      Capture ICMP packets" << endl;
-        cout << "  -s, --snmp      Capture SNMP packets" << endl;
-        cout << "  -v, --version   Show version and exit" << endl;
+        cout << "  -a, --arp         Capture ARP packets" << endl;
+        cout << "  -h, --help        Show this help and exit" << endl;
+        cout << "  -i, --icmp        Capture ICMP packets" << endl;
+        cout << "  -s, --snmp        Capture SNMP packets" << endl;
+        cout << "  -v, --version     Show version and exit" << endl;
+        cout << endl << "Arguments:" << endl;
+        cout << "  -S <ip>, --spoof  Use <ip> as own ip address" << endl;
         exit(EXIT_SUCCESS);
 
       case 'i':
@@ -114,6 +120,16 @@ void readOptions(string& interface, string& filter, int argc, char **argv) {
 
       case 's':
         filter.append(" or snmp");
+        break;
+
+      case 'S':
+        // Validate ip address in dot separated octets
+        struct sockaddr_in sa;
+        if (inet_pton(AF_INET, optarg, &(sa.sin_addr)) <= 0) {
+          cerr << "Invalid ip address on spoof argument" << endl;
+          exit(EXIT_FAILURE);
+        }
+        ip = optarg;
         break;
 
       case 'v':
